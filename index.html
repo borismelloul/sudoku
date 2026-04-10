@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sudoku">
+<meta name="theme-color" content="#f2ead8">
+<title>Sudoku</title>
+<link rel="apple-touch-icon" href="sudoku.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html{height:100%;overflow:hidden}
+body{
+  height:100%;overflow:hidden;
+  background:#f2ead8;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Rounded',sans-serif;
+  color:#1a100a;-webkit-user-select:none;user-select:none;
+  display:flex;flex-direction:column;align-items:center;
+  padding:max(env(safe-area-inset-top,0px),12px) 14px max(env(safe-area-inset-bottom,0px),10px);
+  gap:7px;max-width:440px;margin:0 auto;
+}
+
+/* ── Header ── */
+header{display:flex;justify-content:space-between;align-items:center;width:100%;flex-shrink:0}
+h1{font-size:20px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#2a1608;opacity:.88}
+#timer{font-size:17px;color:#8a6e44;font-variant-numeric:tabular-nums;font-weight:500}
+
+/* ── Controls row ── */
+#ctrl{display:flex;align-items:center;gap:8px;width:100%;flex-shrink:0}
+#diff-btn{
+  flex:1;padding:10px 14px;
+  border:1.5px solid rgba(110,80,40,.28);border-radius:24px;
+  background:#fff9f0;
+  font-size:15px;font-weight:700;color:#3d2008;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px
+}
+#diff-arr{opacity:.4;font-size:12px;font-weight:400}
+#new-btn{
+  padding:10px 20px;
+  border:1.5px solid #2a1608;border-radius:24px;
+  background:#2a1608;
+  font-size:14px;font-weight:700;color:#f5eed8;
+  cursor:pointer;white-space:nowrap
+}
+#diff-btn:active,#new-btn:active,#mode-btn:active{opacity:.65}
+#mode-btn{
+  padding:10px 13px;
+  border:1.5px solid rgba(110,80,40,.28);border-radius:24px;
+  background:#fff9f0;
+  font-size:13px;font-weight:700;color:#3d2008;
+  cursor:pointer;white-space:nowrap
+}
+#mode-btn.paper{background:#3d6b2a;border-color:#3d6b2a;color:#f5eed8}
+
+/* ── Grid ── */
+#grid{
+  display:grid;grid-template-columns:repeat(9,1fr);
+  width:min(calc(100vw - 28px),344px);
+  aspect-ratio:1/1;
+  border:3px solid #3d2b10;border-radius:4px;
+  overflow:hidden;background:#3d2b10;
+  flex-shrink:0;transform:translateZ(0)
+}
+.c{
+  display:flex;align-items:center;justify-content:center;
+  background:#faf6ec;
+  font-size:clamp(14px,4.8vw,21px);
+  cursor:pointer;
+  border-right:1px solid rgba(110,80,40,.13);
+  border-bottom:1px solid rgba(110,80,40,.13)
+}
+.c.r0{border-top:none}.c.r8{border-bottom:none}
+.c.r3,.c.r6{border-top:2.5px solid rgba(61,43,16,.62)}
+.c.c0{border-left:none}.c.c8{border-right:none}
+.c.c3,.c.c6{border-left:2.5px solid rgba(61,43,16,.62)}
+.c.gv{font-weight:700;color:#1a0f05}
+.c.us{color:#1d4080;font-family:'Bradley Hand','Segoe Script','Snell Roundhand',cursive;font-weight:600}
+.c.sel{background:#ddd3b8!important}
+.c.hl{background:#f1e9d6}
+.c.sn{background:#eae0c8}
+/* Notes micro-grid */
+.ns{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);width:100%;height:100%;gap:1.5px;padding:2px}
+.nd{border-radius:2px}
+.nd.on{background:rgba(255,255,255,.82);box-shadow:0 0 0 .5px rgba(100,120,170,.15)}
+
+/* ── Bottom panel ── */
+#bottom{
+  display:flex;align-items:stretch;gap:0;
+  width:min(calc(100vw - 28px),344px);
+  height:clamp(132px,38.5vw,160px);
+  border:1.5px solid rgba(110,80,40,.18);border-radius:14px;
+  overflow:hidden;background:rgba(255,252,245,.85);
+  flex-shrink:0
+}
+#left-panel{
+  width:33%;display:flex;flex-direction:column;
+  padding:7px;gap:5px;flex-shrink:0
+}
+.ab{
+  flex:1;border:1.5px solid rgba(110,80,40,.18);border-radius:9px;
+  background:#fff9f0;
+  font-size:14px;font-weight:600;color:#4a2e0a;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px
+}
+.ab.on{background:#1d3d72;border-color:#1d3d72;color:#fff}
+.ab:active{opacity:.62}
+.ai{font-size:16px;line-height:1}
+#sep{width:1px;background:rgba(110,80,40,.15);margin:10px 0;flex-shrink:0}
+#right-panel{
+  flex:1;display:grid;
+  grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(3,1fr);
+  gap:5px;padding:7px
+}
+.nb{
+  border:1.5px solid rgba(110,80,40,.18);border-radius:9px;
+  background:#fff9f0;
+  font-size:clamp(20px,5.8vw,26px);font-weight:600;color:#1a0f05;
+  cursor:pointer;display:flex;align-items:center;justify-content:center
+}
+.nb:active{background:rgba(200,155,55,.18);transform:scale(.88)}
+.nb.done{opacity:.17;pointer-events:none}
+
+/* ── Status ── */
+#st{font-size:13px;color:#8a7050;text-align:center;min-height:16px;width:100%;flex-shrink:0}
+
+/* ── Win overlay ── */
+#wo{
+  display:none;position:fixed;inset:0;z-index:50;
+  background:rgba(240,232,212,.97);
+  flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:24px;text-align:center;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)
+}
+#wo-msg{
+  font-size:22px;font-weight:700;color:#1a0f05;
+  direction:rtl;unicode-bidi:bidi-override;
+  line-height:1.7;letter-spacing:.01em;text-align:center;width:100%
+}
+#wo-sub{font-size:15px;color:#8a6e44;font-weight:500}
+#win-gif{
+  max-width:210px;max-height:148px;
+  border-radius:14px;display:none;object-fit:cover;
+  box-shadow:0 4px 18px rgba(0,0,0,.13)
+}
+.wline{width:48px;height:2px;background:#c8a84a;border-radius:2px}
+.wbtn{
+  padding:13px 36px;border:2px solid #1a0f05;border-radius:10px;
+  background:#1a0f05;color:#f5eed8;
+  font-size:16px;font-weight:700;letter-spacing:.05em;cursor:pointer
+}
+.wbtn:active{opacity:.7}
+
+/* ── Confetti canvas ── */
+#ccanvas{position:fixed;inset:0;pointer-events:none;z-index:49;display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sudoku</h1>
+  <span id="timer">0:00</span>
+</header>
+
+<div id="ctrl">
+  <button id="diff-btn" onclick="cycleDiff()">
+    <span id="diff-label">Hard</span>
+    <span id="diff-arr">▸</span>
+  </button>
+  <button id="mode-btn" onclick="cycleMode()">✏️ Paper</button>
+  <button id="new-btn" onclick="ng()">↺ New</button>
+</div>
+
+<div id="grid"></div>
+
+<div id="bottom">
+  <div id="left-panel">
+    <button class="ab" onclick="er()"><span class="ai">⌫</span>Erase</button>
+    <button class="ab" onclick="chk()"><span class="ai">◎</span>Check</button>
+    <button class="ab" id="notebtn" onclick="toggleN()"><span class="ai">✎</span>Notes</button>
+  </div>
+  <div id="sep"></div>
+  <div id="right-panel"></div>
+</div>
+
+<div id="st"></div>
+
+<div id="wo">
+  <div id="wo-msg">!כל הכבוד אהבה שלי<br>!אני כל כך גאה בך 🎉</div>
+  <div class="wline"></div>
+  <img id="win-gif" src="" alt="">
+  <div id="wo-sub"></div>
+  <button class="wbtn" onclick="ng()">Play Again</button>
+</div>
+
+<canvas id="ccanvas"></canvas>
+
+<script>
+// ── Service Worker ────────────────────────────────────────────────────────────
+(function(){
+  if(!('serviceWorker'in navigator)||location.protocol==='file:')return;
+  var sw=[
+    "const C='sdk-v4',U='"+location.href.split('?')[0]+"';",
+    "self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.add(U)));self.skipWaiting();});",
+    "self.addEventListener('activate',e=>e.waitUntil(clients.claim()));",
+    "self.addEventListener('fetch',e=>{",
+    "  if(e.request.mode==='navigate'||e.request.url===U)",
+    "    e.respondWith(caches.match(U).then(r=>r||fetch(e.request)));",
+    "});"
+  ].join('');
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(function(){});
+})();
+
+// ── GIFs ─────────────────────────────────────────────────────────────────────
+var GIFS=[
+  'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
+  'https://media.giphy.com/media/5GoVLqeAOo6PK/giphy.gif',
+  'https://media.giphy.com/media/11sBLVxNs7v6WA/giphy.gif',
+  'https://media.giphy.com/media/26BRzozg4TCBXv6QU/giphy.gif',
+  'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif',
+  'https://media.giphy.com/media/xT77Y1T0zY1We2WT8I/giphy.gif',
+  'https://media.giphy.com/media/l3q2K5jinAlChoCLS/giphy.gif',
+  'https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif'
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+var sol=[],puz=[],board=[],notes=[],given=[],cells=[];
+var SEL=-1,NM=false,SEC=0,TI=null,WIN=false;
+var DIDX=2,DIFFS=['easy','medium','hard','expert'],DLABELS=['Easy','Medium','Hard','Expert'];
+var DIFF='hard',PAPER=false;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function rnd(n){return Math.random()*n|0}
+function shuf(a){for(var i=a.length-1;i>0;i--){var j=rnd(i+1),t=a[i];a[i]=a[j];a[j]=t}return a}
+function fmt(s){var m=s/60|0,ss=s%60;return m+':'+(ss<10?'0':'')+ss}
+
+// ── Sudoku engine ─────────────────────────────────────────────────────────────
+function valid(b,i,n){
+  var r=i/9|0,c=i%9,br=(r/3|0)*3,bc=(c/3|0)*3;
+  for(var k=0;k<9;k++){
+    if(b[r*9+k]===n||b[k*9+c]===n)return false;
+    if(b[(br+(k/3|0))*9+bc+(k%3)]===n)return false;
+  }
+  return true
+}
+function bt(b){
+  var i=b.indexOf(0);if(i<0)return true;
+  var ns=shuf([1,2,3,4,5,6,7,8,9]);
+  for(var k=0;k<9;k++)if(valid(b,i,ns[k])){b[i]=ns[k];if(bt(b))return true;b[i]=0}
+  return false
+}
+function countSol(b,lim){
+  var i=b.indexOf(0);if(i<0)return 1;
+  var cnt=0;
+  for(var n=1;n<=9;n++){
+    if(valid(b,i,n)){b[i]=n;cnt+=countSol(b,lim);b[i]=0;if(cnt>=lim)return cnt}
+  }
+  return cnt
+}
+function gen(d){
+  var s=new Array(81).fill(0);
+  for(var b=0;b<3;b++){
+    var ns=shuf([1,2,3,4,5,6,7,8,9]),k=0;
+    for(var r=b*3;r<b*3+3;r++)for(var c=b*3;c<b*3+3;c++)s[r*9+c]=ns[k++];
+  }
+  bt(s);
+  var clues={easy:38,medium:30,hard:26,expert:22}[d]||26;
+  var p=s.slice(),pos=[];for(var i=0;i<81;i++)pos.push(i);shuf(pos);
+  var rem=0,lim=81-clues;
+  for(var i=0;i<81&&rem<lim;i++){
+    var idx=pos[i],bk=p[idx];p[idx]=0;
+    if(countSol(p.slice(),2)===1)rem++;else p[idx]=bk;
+  }
+  return{sol:s,puz:p}
+}
+
+// ── Paper mode: check full board validity ─────────────────────────────────────
+function paperBoardValid(){
+  for(var i=0;i<81;i++){
+    if(!board[i])return false;
+    var r=i/9|0,c=i%9,br=(r/3|0)*3,bc=(c/3|0)*3,n=board[i];
+    for(var k=0;k<9;k++){
+      if(k!==c&&board[r*9+k]===n)return false;
+      if(k!==r&&board[k*9+c]===n)return false;
+    }
+    for(var dr=0;dr<3;dr++)for(var dc=0;dc<3;dc++){
+      var bi=(br+dr)*9+(bc+dc);if(bi!==i&&board[bi]===n)return false;
+    }
+  }
+  return true
+}
+
+// ── DOM build ─────────────────────────────────────────────────────────────────
+function buildGrid(){
+  var g=document.getElementById('grid');g.innerHTML='';cells=[];
+  for(var i=0;i<81;i++){
+    var el=document.createElement('div'),r=i/9|0,c=i%9;
+    el.className='c r'+r+' c'+c;
+    el.addEventListener('click',(function(x){return function(){pick(x)}})(i));
+    g.appendChild(el);cells.push(el);
+  }
+}
+function buildPad(){
+  var p=document.getElementById('right-panel');p.innerHTML='';
+  for(var n=1;n<=9;n++){
+    var b=document.createElement('button');b.className='nb';b.textContent=n;b.id='nb'+n;
+    b.addEventListener('click',(function(x){return function(){inp(x)}})(n));
+    p.appendChild(b);
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function rc(i){
+  var el=cells[i],n=board[i];
+  el.classList.remove('gv','us');el.innerHTML='';
+  if(notes[i]&&notes[i].size){
+    var d=document.createElement('div');d.className='ns';
+    d.style.position='absolute';d.style.inset='0';
+    for(var k=1;k<=9;k++){
+      var nd=document.createElement('div');nd.className='nd'+(notes[i].has(k)?' on':'');
+      d.appendChild(nd);
+    }
+    el.style.position='relative';el.appendChild(d);
+  } else {el.style.position='';}
+  if(n){
+    var span=document.createElement('span');
+    span.textContent=n;span.style.position='relative';span.style.zIndex='1';
+    el.appendChild(span);
+    if(given[i])el.classList.add('gv');else el.classList.add('us');
+  }
+}
+function hl(){
+  var sn=SEL>=0?board[SEL]:0;
+  var sr=SEL>=0?(SEL/9|0):-1,sc=SEL>=0?SEL%9:-1;
+  var sb=SEL>=0?((sr/3|0)*3+(sc/3|0)):-1;
+  for(var i=0;i<81;i++){
+    var el=cells[i];el.classList.remove('sel','hl','sn');
+    if(i===SEL){el.classList.add('sel');continue}
+    var r=i/9|0,c=i%9,bx=(r/3|0)*3+(c/3|0);
+    if(SEL>=0&&(r===sr||c===sc||bx===sb))el.classList.add('hl');
+    if(sn&&board[i]===sn)el.classList.add('sn');
+  }
+}
+function ra(){for(var i=0;i<81;i++)rc(i);hl();updPad()}
+
+function updPad(){
+  if(PAPER){
+    for(var n=1;n<=9;n++){var b=document.getElementById('nb'+n);if(b)b.classList.remove('done');}
+    return;
+  }
+  // Puzzle: disable if all 9 placed, or a GIVEN with same value in r/c/box of selected cell
+  var cnt=new Array(10).fill(0);
+  for(var i=0;i<81;i++)if(board[i])cnt[board[i]]++;
+  var blocked=new Array(10).fill(false);
+  if(SEL>=0){
+    var sr=SEL/9|0,sc=SEL%9,sbr=(sr/3|0)*3,sbc=(sc/3|0)*3;
+    for(var k=0;k<9;k++){
+      var a=sr*9+k,b2=k*9+sc;
+      if(given[a]&&board[a])blocked[board[a]]=true;
+      if(given[b2]&&board[b2])blocked[board[b2]]=true;
+    }
+    for(var dr=0;dr<3;dr++)for(var dc=0;dc<3;dc++){
+      var bi=(sbr+dr)*9+(sbc+dc);
+      if(given[bi]&&board[bi])blocked[board[bi]]=true;
+    }
+  }
+  for(var n=1;n<=9;n++){
+    var b=document.getElementById('nb'+n);
+    if(b)b.classList.toggle('done',cnt[n]>=9||blocked[n]);
+  }
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+function pick(i){SEL=i;hl();updPad();document.getElementById('st').textContent=''}
+
+function inp(n){
+  if(SEL<0||WIN)return;
+  if(!PAPER&&given[SEL])return;
+
+  if(NM){
+    // Notes: just toggle on this cell only, no cross-cell deletion
+    if(!notes[SEL])notes[SEL]=new Set();
+    notes[SEL].has(n)?notes[SEL].delete(n):notes[SEL].add(n);
+    rc(SEL);hl();save();
+    return;
+  }
+
+  if(PAPER){
+    // Paper: write freely, notes stay, no restrictions
+    board[SEL]=n;
+    rc(SEL);hl();save();
+    // Win only when board is completely full and valid
+    var full=true;for(var i=0;i<81;i++)if(!board[i]){full=false;break}
+    if(full){
+      if(paperBoardValid())triggerWin();
+      else{
+        var st=document.getElementById('st');
+        st.textContent='Board has conflicts — keep going!';
+        setTimeout(function(){if(!WIN)st.textContent=''},2500);
+      }
+    }
+    return;
+  }
+
+  // Puzzle: block if a GIVEN with same value exists in same row/col/box
+  var r=SEL/9|0,c=SEL%9,br=(r/3|0)*3,bc=(c/3|0)*3;
+  for(var k=0;k<9;k++){
+    if(given[r*9+k]&&board[r*9+k]===n)return;
+    if(given[k*9+c]&&board[k*9+c]===n)return;
+  }
+  for(var dr=0;dr<3;dr++)for(var dc=0;dc<3;dc++){
+    var bi=(br+dr)*9+(bc+dc);if(given[bi]&&board[bi]===n)return;
+  }
+
+  board[SEL]=n;
+  // Erase same number from other USER cells in same row, col, and box
+  for(var k=0;k<9;k++){
+    var ri=r*9+k,ci=k*9+c;
+    if(ri!==SEL&&!given[ri]&&board[ri]===n)board[ri]=0;
+    if(ci!==SEL&&!given[ci]&&board[ci]===n)board[ci]=0;
+  }
+  for(var dr=0;dr<3;dr++)for(var dc=0;dc<3;dc++){
+    var bi=(br+dr)*9+(bc+dc);
+    if(bi!==SEL&&!given[bi]&&board[bi]===n)board[bi]=0;
+  }
+  ra();save();chkW();
+}
+
+function er(){
+  if(SEL<0||WIN)return;
+  if(!PAPER&&given[SEL])return;
+  board[SEL]=0;notes[SEL]=new Set();rc(SEL);hl();updPad();save();
+  document.getElementById('st').textContent='';
+}
+
+function toggleN(){NM=!NM;document.getElementById('notebtn').classList.toggle('on',NM)}
+
+function chk(){
+  if(PAPER){
+    var errs=0;
+    for(var i=0;i<81;i++){
+      if(!board[i])continue;
+      var r=i/9|0,c=i%9,br=(r/3|0)*3,bc=(c/3|0)*3,n=board[i];
+      outer:for(var k=0;k<9;k++){
+        if(k!==c&&board[r*9+k]===n){errs++;break outer}
+        if(k!==r&&board[k*9+c]===n){errs++;break outer}
+      }
+    }
+    var st=document.getElementById('st');
+    st.textContent=errs?'⚠ '+errs+' conflict'+(errs>1?'s':''):'✓ No conflicts found';
+    setTimeout(function(){if(!WIN)st.textContent=''},2500);
+    return;
+  }
+  var done=0,total=0;
+  for(var i=0;i<81;i++)if(!given[i]){total++;if(board[i])done++}
+  var pct=total?Math.round(done/total*100):0;
+  document.getElementById('st').textContent=pct+'% — '+done+'/'+total+' cells filled';
+  setTimeout(function(){if(!WIN)document.getElementById('st').textContent=''},2500);
+}
+
+function chkW(){
+  for(var i=0;i<81;i++)if(!board[i]||board[i]!==sol[i])return;
+  triggerWin();
+}
+
+function triggerWin(){
+  WIN=true;clearInterval(TI);
+  localStorage.removeItem('sdk');
+  setTimeout(function(){
+    document.getElementById('wo-sub').textContent='⏱ '+fmt(SEC);
+    document.getElementById('wo').style.display='flex';
+    startConfetti();
+    if(navigator.onLine){
+      var img=document.getElementById('win-gif');
+      img.src=GIFS[rnd(GIFS.length)];
+      img.style.display='block';
+      img.onerror=function(){this.style.display='none'};
+    }
+  },450);
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────────
+function startConfetti(){
+  var cv=document.getElementById('ccanvas');
+  cv.style.display='block';cv.width=window.innerWidth;cv.height=window.innerHeight;
+  var ctx=cv.getContext('2d');
+  var cols=['#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#ec4899','#f97316','#06b6d4'];
+  var pp=[];
+  for(var i=0;i<140;i++)pp.push({
+    x:Math.random()*cv.width,y:-Math.random()*cv.height*.7-10,
+    w:Math.random()*10+4,h:Math.random()*5+2,c:cols[rnd(cols.length)],
+    rot:Math.random()*Math.PI*2,vx:(Math.random()-.5)*3.5,
+    vy:Math.random()*3+1.5,vr:(Math.random()-.5)*.16
+  });
+  var t0=Date.now();
+  (function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);var alive=false;
+    for(var i=0;i<pp.length;i++){
+      var p=pp[i];
+      if(p.y<cv.height+10){alive=true;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;
+        ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+        ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();}
+    }
+    if(alive&&Date.now()-t0<6000)requestAnimationFrame(draw);
+    else cv.style.display='none';
+  })();
+}
+
+// ── Save / Resume ─────────────────────────────────────────────────────────────
+function save(){
+  try{
+    localStorage.setItem('sdk',JSON.stringify({
+      sol:sol,puz:puz,board:board,
+      notes:notes.map(function(s){return Array.from(s)}),
+      diff:DIFF,didx:DIDX,sec:SEC,paper:PAPER
+    }));
+  }catch(e){}
+}
+function loadSave(){
+  try{
+    var raw=localStorage.getItem('sdk');if(!raw)return false;
+    var d=JSON.parse(raw);
+    sol=d.sol;puz=d.puz;board=d.board;
+    given=puz.map(function(v){return v>0});
+    notes=d.notes.map(function(a){return new Set(a)});
+    DIFF=d.diff;DIDX=d.didx!=null?d.didx:2;SEC=d.sec||0;PAPER=d.paper||false;
+    document.getElementById('diff-label').textContent=DLABELS[DIDX]||'Hard';
+    document.getElementById('mode-btn').textContent=PAPER?'🧩 Puzzle':'✏️ Paper';
+    document.getElementById('mode-btn').classList.toggle('paper',PAPER);
+    return true;
+  }catch(e){return false}
+}
+
+// ── Timer ─────────────────────────────────────────────────────────────────────
+function startT(){clearInterval(TI);upT();TI=setInterval(function(){SEC++;upT();save()},1000)}
+function upT(){document.getElementById('timer').textContent=fmt(SEC)}
+
+// ── Difficulty & Mode toggles ─────────────────────────────────────────────────
+function cycleDiff(){
+  DIDX=(DIDX+1)%DIFFS.length;DIFF=DIFFS[DIDX];
+  document.getElementById('diff-label').textContent=DLABELS[DIDX];
+  ng();
+}
+function cycleMode(){
+  PAPER=!PAPER;
+  document.getElementById('mode-btn').textContent=PAPER?'🧩 Puzzle':'✏️ Paper';
+  document.getElementById('mode-btn').classList.toggle('paper',PAPER);
+  updPad();save();
+}
+
+// ── New game ──────────────────────────────────────────────────────────────────
+function ng(){
+  WIN=false;SEL=-1;NM=false;
+  document.getElementById('notebtn').classList.remove('on');
+  document.getElementById('wo').style.display='none';
+  document.getElementById('ccanvas').style.display='none';
+  document.getElementById('win-gif').style.display='none';
+  document.getElementById('win-gif').src='';
+  document.getElementById('st').textContent='';
+  var g=gen(DIFF);
+  sol=g.sol;puz=g.puz;board=puz.slice();
+  given=puz.map(function(v){return v>0});
+  notes=[];for(var i=0;i<81;i++)notes.push(new Set());
+  SEC=0;ra();startT();save();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+buildGrid();buildPad();
+if(loadSave()){WIN=false;SEL=-1;NM=false;ra();startT();}
+else ng();
+</script>
+</body>
+</html>
